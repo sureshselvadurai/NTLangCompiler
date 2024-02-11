@@ -15,13 +15,12 @@ struct parse_node_st * parse_node_new(struct parse_table_st *pt) {
     return np;
 }
 
-void parse_error(char *err) {
+void parse_error(const char *err) {
     printf("parse_error: %s\n", err);
     exit(-1);
 }
 
-char *parse_oper_strings[] = {"PLUS", "MINUS", "MULT", "DIV"};
-
+char *parse_oper_strings[] = {"PLUS", "MINUS", "MULT", "DIV", "SHIFT_RIGHT", "SHIFT_LEFT", "ARITH_SHIFT_RIGHT", "BIT_AND", "BIT_OR", "BIT_XOR", "BIT_NOT"};
 
 /* We need to provide prototypes for the parsing functions because
  * we call them before they are defined.
@@ -60,25 +59,19 @@ struct parse_node_st * parse_expression(struct parse_table_st *pt,
     while (true) {
         tp = scan_table_get(st, 0);
         /* Check for valid operator */
-        if (tp->id == TK_PLUS || tp->id == TK_MINUS) {
-            /* Use TK_ANY as a wildcard */
+        if (tp->id == TK_PLUS || tp->id == TK_MINUS || tp->id == TK_MULT || tp->id == TK_DIV || tp->id == TK_SHIFT_RIGHT || tp->id == TK_SHIFT_LEFT || tp->id == TK_ARITH_SHIFT_RIGHT || tp->id == TK_BIT_AND || tp->id == TK_BIT_OR || tp->id == TK_BIT_XOR) {
             scan_table_accept(st, TK_ANY);
             np2 = parse_node_new(pt);
             np2->type = EX_OPER2;
-            if (tp->id == TK_PLUS) {
-                np2->oper2.oper = OP_PLUS;
-            } else if (tp->id == TK_MINUS) {
-                np2->oper2.oper = OP_MINUS;
-            }
+            np2->oper2.oper = tp->id - TK_PLUS;
             np2->oper2.left = np1;
-            /* Now parse second operand */
+            /* parse second operand */
             np2->oper2.right = parse_operand(pt, st);
             np1 = np2;
         } else {
             break;
         }
     }
-
     return np1;
 }
 
@@ -88,20 +81,66 @@ struct parse_node_st * parse_operand(struct parse_table_st *pt,
     struct parse_node_st *np1;
 
     if (scan_table_accept(st, TK_INTLIT)) {
-        tp = scan_table_get(st, -1);
-        np1 = parse_node_new(pt);
-        np1->type = EX_INTVAL;
-        /* For Project01 you need to implement your own version of atoi() */
-        np1->intval.value = atoi(tp->value);
-    } else if (scan_table_accept(st, TK_MINUS)) {
-        np1 = parse_node_new(pt);
-        np1->type = EX_OPER1;
-        np1->oper1.oper = OP_MINUS;
-        np1->oper1.operand = parse_operand(pt, st);
-    } else {
-        parse_error("Bad operand");
-    }
-
+            tp = scan_table_get(st, -1);
+            np1 = parse_node_new(pt);
+            np1->type = EX_LITERAL;
+            np1->literal.value = 0;
+            for (int i = 0; tp->value[i] != '\0'; i++) {
+                if (tp->value[i] < '0' || tp->value[i] > '9') {
+                    parse_error("Invalid integer literal");
+                }
+                np1->literal.value = np1->literal.value * 10 + (tp->value[i] - '0');
+            }
+        } else if (scan_table_accept(st, TK_HEXLIT)) {
+            tp = scan_table_get(st, -1);
+            np1 = parse_node_new(pt);
+            np1->type = EX_LITERAL;
+            np1->literal.value = 0;
+            for (int i = 0; tp->value[i] != '\0'; i++) {
+                if (i >= 0) {
+                    if (tp->value[i] >= '0' && tp->value[i] <= '9') {
+                        np1->literal.value = np1->literal.value * 16 + (tp->value[i] - '0');
+                    } else if (tp->value[i] >= 'A' && tp->value[i] <= 'F') {
+                        np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'A' + 10);
+                    } else if (tp->value[i] >= 'a' && tp->value[i] <= 'f') {
+                        np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'a' + 10);
+                    } else {
+                        parse_error("Invalid hexadecimal literal");
+                    }
+                }
+            }
+        } else if (scan_table_accept(st, TK_BINLIT)) {
+            tp = scan_table_get(st, -1);
+            np1 = parse_node_new(pt);
+            np1->type = EX_LITERAL;
+            np1->literal.value = 0;
+            for (int i = 0; tp->value[i] != '\0'; i++) {
+                if (i >= 0) {
+                    if (tp->value[i] == '0' || tp->value[i] == '1') {
+                        np1->literal.value = np1->literal.value * 2 + (tp->value[i] - '0');
+                    } else {
+                        parse_error("Invalid binary literal");
+                    }
+                }
+            }
+        } else if (scan_table_accept(st, TK_MINUS)) {
+            np1 = parse_node_new(pt);
+            np1->type = EX_OPER1;
+            np1->oper1.oper = OP_MINUS;
+            np1->oper1.operand = parse_operand(pt, st);
+        } else if (scan_table_accept(st, TK_BIT_NOT)) {
+            np1 = parse_node_new(pt);
+            np1->type = EX_OPER1;
+            np1->oper1.oper = OP_BIT_NOT;
+            np1->oper1.operand = parse_operand(pt, st);
+        } else if (scan_table_accept(st, TK_LPAREN)) {
+            np1 = parse_expression(pt, st);
+            if (!scan_table_accept(st, TK_RPAREN)) {
+                parse_error("Expecting ')'");
+            }
+        } else {
+            parse_error("Bad operand");
+        }
     return np1;
 }
 
@@ -116,8 +155,8 @@ void parse_tree_print_expr(struct parse_node_st *np, int level) {
     parse_tree_print_indent(level);
     printf("EXPR ");
 
-    if (np->type == EX_INTVAL) {
-        printf("INTVAL %d\n", np->intval.value);
+    if (np->type == EX_LITERAL) {
+        printf("LITERAL %d\n", np->literal.value);
     } else if (np->type == EX_OPER1) {
         printf("OPER1 %s\n", parse_oper_strings[np->oper1.oper]);
         parse_tree_print_expr(np->oper1.operand, level+1);

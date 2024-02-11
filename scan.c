@@ -61,6 +61,34 @@ char * scan_intlit(char *p, char *end, struct scan_token_st *tp) {
     return p;
 }
 
+char *scan_hexlit(char *p, char *end, struct scan_token_st *tp) {
+    int i = 0;
+    p += 2;
+    while ((scan_is_digit(*p) || (*p >= 'A' && *p <= 'F') || (*p >= 'a' && *p <= 'f')) && (p < end)) {
+        tp->value[i] = *p;
+        p += 1;
+        i += 1;
+    }
+    tp->value[i] = '\0';
+    tp->id = TK_HEXLIT;
+    return p;
+}
+
+
+char *scan_binlit(char *p, char *end, struct scan_token_st *tp) {
+    int i = 0;
+    p += 2;  // Skip '0b' or '0B'
+    while ((*p == '0' || *p == '1') && (p < end)) {
+        tp->value[i] = *p;
+        p += 1;
+        i += 1;
+    }
+    tp->value[i] = '\0';
+    tp->id = TK_BINLIT;
+    return p;
+}
+
+
 char * scan_token_helper(struct scan_token_st *tp, char *p, int len,
                        enum scan_token_enum id) {
     /* Read a token starting a p for len characters.
@@ -91,12 +119,42 @@ char * scan_token(char *p, char *end, struct scan_token_st *tp) {
         /* Ingore whitespace. Notice the recursive call. */
         p = scan_whitespace(p, end);
         p = scan_token(p, end, tp);
-    } else if (scan_is_digit(*p)) {
+    } else if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
+        p = scan_hexlit(p, end, tp);
+    } else if (p[0] == '0' && (p[1] == 'b' || p[1] == 'B')) {
+         p = scan_binlit(p, end, tp);
+    }  else if (scan_is_digit(*p)) {
         p = scan_intlit(p, end, tp);        
     } else if (*p == '+') {
         p = scan_token_helper(tp, p, 1, TK_PLUS);
     } else if (*p == '-') {
         p = scan_token_helper(tp, p, 1, TK_MINUS);
+    } else if (*p == '*') {
+        p = scan_token_helper(tp, p, 1, TK_MULT);
+    } else if (*p == '/') {
+        p = scan_token_helper(tp, p, 1, TK_DIV);
+    } else if (*p == '>') {
+        if (*(p + 1) == '>') {
+            p = scan_token_helper(tp, p, 2, TK_SHIFT_RIGHT);
+        } else if (*(p + 1) == '-') {
+            p = scan_token_helper(tp, p, 2, TK_ARITH_SHIFT_RIGHT);
+        }
+    } else if (*p == '<') {
+        if (*(p + 1) == '<') {
+            p = scan_token_helper(tp, p, 2, TK_SHIFT_LEFT);
+        }
+    } else if (*p == '&') {
+        p = scan_token_helper(tp, p, 1, TK_BIT_AND);
+    } else if (*p == '|') {
+        p = scan_token_helper(tp, p, 1, TK_BIT_OR);
+    } else if (*p == '^') {
+        p = scan_token_helper(tp, p, 1, TK_BIT_XOR);
+    } else if (*p == '~') {
+        p = scan_token_helper(tp, p, 1, TK_BIT_NOT);
+    } else if (*p == '(') {
+        p = scan_token_helper(tp, p, 1, TK_LPAREN);
+    } else if (*p == ')') {
+        p = scan_token_helper(tp, p, 1, TK_RPAREN);
     } else {
         /* Instead of returning an error code, we will usually
            exit on failure. */
@@ -147,7 +205,6 @@ bool scan_table_accept(struct scan_table_st *st, enum scan_token_enum tk_expecte
     }
 
     tp = scan_table_get(st, 0);
-
     if (tp->id == tk_expected) {
         st->cur += 1;
         return true;
