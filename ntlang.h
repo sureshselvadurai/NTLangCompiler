@@ -160,4 +160,9 @@ void parse_args(struct config_st *cp, int argc, char **argv);
 
 uint32_t eval(struct parse_node_st *pt);
 void eval_print(struct config_st *cp, uint32_t value);
-void int_to_str(uint32_t value, char *str, int base, int width,struct config_st *cp);
+uint32_t mask_value(uint32_t value, uint32_t width);
+bool is_negative(uint32_t n_bit_value, int width, int unsigned_int);
+void convert_to_decimal(int n_bit_value, char *str, int *i, int sign, int width);
+void convert_to_binary(uint32_t value, char *str, int *i, int width);
+void convert_to_hexadecimal(uint32_t value, char *str, int *i, int width);
+void eval_error(char *err);

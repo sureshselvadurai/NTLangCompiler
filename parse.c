@@ -63,14 +63,12 @@ struct parse_node_st * parse_expression(struct parse_table_st *pt,
 
     while (true) {
         tp = scan_table_get(st, 0);
-        /* Check for valid operator */
         if (tp->id == TK_PLUS || tp->id == TK_MINUS || tp->id == TK_MULT || tp->id == TK_DIV || tp->id == TK_SHIFT_RIGHT || tp->id == TK_SHIFT_LEFT || tp->id == TK_ARITH_SHIFT_RIGHT || tp->id == TK_BIT_AND || tp->id == TK_BIT_OR || tp->id == TK_BIT_XOR) {
             scan_table_accept(st, TK_ANY);
             np2 = parse_node_new(pt);
             np2->type = EX_OPER2;
             np2->oper2.oper = tp->id - TK_PLUS;
             np2->oper2.left = np1;
-            /* parse second operand */
             np2->oper2.right = parse_operand(pt, st);
             np1 = np2;
         } else {
@@ -104,21 +102,18 @@ struct parse_node_st * parse_operand(struct parse_table_st *pt,
              for (int i = 0; tp->value[i] != '\0'; i++) {
                  if (i >= 0) {
                      if (tp->value[i] >= '0' && tp->value[i] <= '9') {
-                         // Check for overflow before performing addition
                          if (np1->literal.value <= (UINT32_MAX - (tp->value[i] - '0')) / 16) {
                              np1->literal.value = np1->literal.value * 16 + (tp->value[i] - '0');
                          } else {
                              parse_error_message("overflows uint32_t: ", tp->value);
                          }
                      } else if (tp->value[i] >= 'A' && tp->value[i] <= 'F') {
-                         // Check for overflow before performing addition
                          if (np1->literal.value <= (UINT32_MAX - (tp->value[i] - 'A' + 10)) / 16) {
                              np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'A' + 10);
                          } else {
                              parse_error_message("overflows uint32_t: ", tp->value);
                          }
                      } else if (tp->value[i] >= 'a' && tp->value[i] <= 'f') {
-                         // Check for overflow before performing addition
                          if (np1->literal.value <= (UINT32_MAX - (tp->value[i] - 'a' + 10)) / 16) {
                              np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'a' + 10);
                          } else {
