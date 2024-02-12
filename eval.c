@@ -7,8 +7,7 @@ uint32_t eval(struct parse_node_st *pt);
 void eval_print(struct config_st *cp, uint32_t value);
 void int_to_str(uint32_t value, char *str, int base, int width,struct config_st *cp);
 void convert_to_binary(uint32_t value, char *str, int *i, int width);
-void convert_to_decimal(int32_t value, char *str, int *i, int width);
-void convert_to_positive_decimal(uint32_t value, char *str, int *i, int width);
+void convert_to_decimal(uint32_t value, char *str, int *i, int width, int is_unsigned);
 void convert_to_hexadecimal(uint32_t value, char *str, int *i, int width);
 void bitsToNBits(uint32_t *value, size_t n);
 
@@ -91,6 +90,23 @@ uint32_t eval(struct parse_node_st *pt) {
     return 0;
 }
 
+uint32_t mask_value(uint32_t value, uint32_t width) {
+    if(width!=32){
+        value =  (value & ((1 << width) - 1));
+    }
+    return value;
+}
+
+bool is_negative(uint32_t n_bit_value, int width, int unsigned_int) {
+    bool sign = false;
+    if(unsigned_int){
+        if (n_bit_value & (1 << (width - 1))) {
+            return true;
+        }
+    }
+    return sign;
+}
+
 void eval_print(struct config_st *cp, uint32_t value) {
     /*
      * Handle -b -w -u
@@ -98,12 +114,50 @@ void eval_print(struct config_st *cp, uint32_t value) {
      * Use your own conversion functions for uint32_t to string.
      */
     char str[SCAN_INPUT_LEN];
+    int i=0;
 
-    int_to_str(value, str, cp->base, cp->width, cp);
+    uint32_t n_bit_value  =  mask_value(value, cp->width);
+    int sign = is_negative(n_bit_value, cp->width, cp->unsigned_int);
 
-    if (cp->unsigned_int && cp->base == 10) {
-        printf("%u\n", value);
-    } else {
+
+    switch (cp->base) {
+        case 10:
+            while (n_bit_value != 0) {
+                int remainder = n_bit_value % 10;
+                str[i++] = remainder + '0';
+                n_bit_value /= 10;
+            }
+            if (sign) {
+                str[i++] = '-';
+            }
+            break;
+        case 2:
+            convert_to_binary(value, str, &i, cp->width);
+            break;
+        case 16:
+            convert_to_hexadecimal(value, str, &i, cp->width);
+            break;
+    }
+
+
+    int len = i;
+    for (int j = 0; j < len / 2; j++) {
+        char temp = str[j];
+        str[j] = str[len - j - 1];
+        str[len - j - 1] = temp;
+    }
+
+
+
+    str[i] = '\0';
+
+
+
+//    int_to_str(value, str, cp->base, cp->width, cp);
+
+//    if (cp->unsigned_int && cp->base == 10) {
+//        printf("%u\n", value);
+//    } else {
         switch (cp->base) {
             case 2:
                 printf("0b%s\n", str);
@@ -115,7 +169,7 @@ void eval_print(struct config_st *cp, uint32_t value) {
                 printf("0x%s\n", str);
                 break;
         }
-    }
+//    }
 }
 
 void int_to_str(uint32_t value, char *str, int base, int width, struct config_st *cp) {
@@ -133,14 +187,7 @@ void int_to_str(uint32_t value, char *str, int base, int width, struct config_st
             convert_to_binary(value, str, &i, width);
             break;
         case 10:
-            if(cp->unsigned_int){
-                convert_to_positive_decimal(value, str, &i, width);
-                }
-            else{
-                convert_to_decimal(value, str, &i, width);
-            }
-
-
+            convert_to_decimal(value, str, &i, width,cp->unsigned_int);
             break;
         case 16:
             convert_to_hexadecimal(value, str, &i, width);
@@ -157,10 +204,6 @@ void int_to_str(uint32_t value, char *str, int base, int width, struct config_st
 }
 
 void convert_to_binary(uint32_t value, char *str, int *i, int width) {
-    if(width!=32){
-        uint32_t mask = ((uint32_t)1 << width) - 1;
-        value &= mask;
-    }
 
     for (int j = 0; j < width ; j++) {
         uint32_t mask = 1 << j;
@@ -171,19 +214,16 @@ void convert_to_binary(uint32_t value, char *str, int *i, int width) {
     }
 }
 
-void convert_to_decimal(int32_t value, char *str, int *i, int width) {
+void convert_to_decimal(uint32_t value, char *str, int *i, int width, int is_unsigned){
     // Mask to retain only the least significant 'width' bits
-
+    printf("Value before change: %u\n", value);
     if(width != 32) {
         uint32_t mask = ((uint32_t)1 << width) - 1;
         value &= mask;
     }
-
-    // Convert negative value to positive for processing
-
-    if (value < 0) {
-        value = ~value+1;
-    }
+    printf("Value after change: %u\n", value);
+    printf("%d |",value);
+    printf("%d |",width);
 
     // Convert to decimal
     if (value == 0) {
@@ -196,25 +236,9 @@ void convert_to_decimal(int32_t value, char *str, int *i, int width) {
         str[(*i)++] = remainder + '0';
         value /= 10;
     }
-    str[(*i)++] = '-';
 
-}
-
-void convert_to_positive_decimal(uint32_t value, char *str, int *i, int width) {
-    if(width != 32) {
-        uint32_t mask = ((uint32_t)1 << width) - 1;
-        value &= mask;
-    }
-
-    if (value == 0) {
-        str[(*i)++] = '0';
-        return;
-    }
-
-    while (value != 0) {
-        int remainder = value % 10;
-        str[(*i)++] = remainder + '0';
-        value /= 10;
+    if (value & (1u << (width - 1))) {
+        str[(*i)++] = '-';
     }
 
 }

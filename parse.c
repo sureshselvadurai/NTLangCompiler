@@ -16,7 +16,7 @@ struct parse_node_st * parse_node_new(struct parse_table_st *pt) {
 }
 
 void parse_error(const char *err) {
-    printf("parse_error: %s\n", err);
+    printf("%s\n", err);
     exit(-1);
 }
 

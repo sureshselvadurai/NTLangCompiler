@@ -29,7 +29,7 @@ void parse_args(struct config_st *cp, int argc, char **argv) {
 
     cp->base = 10;
     cp->width = 32;
-    cp->unsigned_int = false;
+    cp->unsigned_int = true;
 
     if (argc <= 2) {
         printf("Usage: project01 -e expression [-b base] [-w width] [-u]\n");
@@ -68,7 +68,7 @@ void parse_args(struct config_st *cp, int argc, char **argv) {
                 exit(-1);
             }
         } else if (strcmp(argv[i], "-u") == 0) {
-            cp->unsigned_int = true;
+            cp->unsigned_int = false;
         }
         i += 1;
     }
