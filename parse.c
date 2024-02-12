@@ -20,6 +20,11 @@ void parse_error(const char *err) {
     exit(-1);
 }
 
+void parse_error_message(const char *err, const char *message) {
+    printf("%s%s\n", err, message);
+    exit(-1);
+}
+
 char *parse_oper_strings[] = {"PLUS", "MINUS", "MULT", "DIV", "SHIFT_RIGHT", "SHIFT_LEFT", "ARITH_SHIFT_RIGHT", "BIT_AND", "BIT_OR", "BIT_XOR", "BIT_NOT"};
 
 /* We need to provide prototypes for the parsing functions because
@@ -91,25 +96,40 @@ struct parse_node_st * parse_operand(struct parse_table_st *pt,
                 }
                 np1->literal.value = np1->literal.value * 10 + (tp->value[i] - '0');
             }
-        } else if (scan_table_accept(st, TK_HEXLIT)) {
-            tp = scan_table_get(st, -1);
-            np1 = parse_node_new(pt);
-            np1->type = EX_LITERAL;
-            np1->literal.value = 0;
-            for (int i = 0; tp->value[i] != '\0'; i++) {
-                if (i >= 0) {
-                    if (tp->value[i] >= '0' && tp->value[i] <= '9') {
-                        np1->literal.value = np1->literal.value * 16 + (tp->value[i] - '0');
-                    } else if (tp->value[i] >= 'A' && tp->value[i] <= 'F') {
-                        np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'A' + 10);
-                    } else if (tp->value[i] >= 'a' && tp->value[i] <= 'f') {
-                        np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'a' + 10);
-                    } else {
-                        parse_error("Invalid hexadecimal literal");
-                    }
-                }
-            }
-        } else if (scan_table_accept(st, TK_BINLIT)) {
+        }else if (scan_table_accept(st, TK_HEXLIT)) {
+             tp = scan_table_get(st, -1);
+             np1 = parse_node_new(pt);
+             np1->type = EX_LITERAL;
+             np1->literal.value = 0;
+             for (int i = 0; tp->value[i] != '\0'; i++) {
+                 if (i >= 0) {
+                     if (tp->value[i] >= '0' && tp->value[i] <= '9') {
+                         // Check for overflow before performing addition
+                         if (np1->literal.value <= (UINT32_MAX - (tp->value[i] - '0')) / 16) {
+                             np1->literal.value = np1->literal.value * 16 + (tp->value[i] - '0');
+                         } else {
+                             parse_error_message("overflows uint32_t: ", tp->value);
+                         }
+                     } else if (tp->value[i] >= 'A' && tp->value[i] <= 'F') {
+                         // Check for overflow before performing addition
+                         if (np1->literal.value <= (UINT32_MAX - (tp->value[i] - 'A' + 10)) / 16) {
+                             np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'A' + 10);
+                         } else {
+                             parse_error_message("overflows uint32_t: ", tp->value);
+                         }
+                     } else if (tp->value[i] >= 'a' && tp->value[i] <= 'f') {
+                         // Check for overflow before performing addition
+                         if (np1->literal.value <= (UINT32_MAX - (tp->value[i] - 'a' + 10)) / 16) {
+                             np1->literal.value = np1->literal.value * 16 + (tp->value[i] - 'a' + 10);
+                         } else {
+                             parse_error_message("overflows uint32_t: ", tp->value);
+                         }
+                     } else {
+                         parse_error("Invalid hexadecimal literal");
+                     }
+                 }
+             }
+         } else if (scan_table_accept(st, TK_BINLIT)) {
             tp = scan_table_get(st, -1);
             np1 = parse_node_new(pt);
             np1->type = EX_LITERAL;

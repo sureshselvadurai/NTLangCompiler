@@ -115,6 +115,7 @@ void eval_print(struct config_st *cp, uint32_t value) {
      */
     char str[SCAN_INPUT_LEN];
     int i=0;
+    int signed_value = 33;
 
     uint32_t n_bit_value  =  mask_value(value, cp->width);
     int sign = is_negative(n_bit_value, cp->width, cp->unsigned_int);
@@ -122,11 +123,25 @@ void eval_print(struct config_st *cp, uint32_t value) {
 
     switch (cp->base) {
         case 10:
+            if (sign) {
+                if(cp->width!=32){
+                    int mask = (1 << cp->width) - 1;
+                    n_bit_value ^= mask;
+                    n_bit_value += 1;
+                }else{
+                    n_bit_value = ~n_bit_value+1;
+                }
+            }
+            if (n_bit_value == 0) {
+                str[i++] = '0';
+                break;
+            }
             while (n_bit_value != 0) {
                 int remainder = n_bit_value % 10;
                 str[i++] = remainder + '0';
                 n_bit_value /= 10;
             }
+
             if (sign) {
                 str[i++] = '-';
             }
