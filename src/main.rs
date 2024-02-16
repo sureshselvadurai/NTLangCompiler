@@ -1,22 +1,26 @@
 mod config;
 mod scan;
 mod parse;
-mod ntlang;
+mod eval;
 
 use std::env;
 use config::Config;
-use scan::{ScanTableSt, scan_table_scan};
+use scan::ScanTableSt;
+use parse::ParseTable;
 
 fn main() {
 
     let config = Config::parse_args(env::args().collect());
 
-    let mut st = ScanTableSt::new();
-    scan_table_scan(&mut st, config.expression.as_bytes());
-    st.print();
+    let mut scan_table = ScanTableSt::new();
+    scan_table.scan(&config.expression);
 
-    parse_table_init(&parse_table);
-    parse_tree = parse_program(&parse_table, &scan_table);
+    let mut parse_table = ParseTable::new();
+    parse_table.parse(&mut scan_table);
 
-    println!("Expression: {}", config.expression);
+
+    let config = Config::parse_args(env::args().collect());
+
 }
+
+
