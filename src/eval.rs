@@ -16,11 +16,11 @@ pub fn eval(pt: &Option<&ParseNode>) -> u32 {
                     let v1 = eval(&pt.left.as_ref().map(|boxed| &**boxed));
                     match pt.oper {
                         ParseOperator::Plus => v1,
-                        ParseOperator::Minus => -(v1 as i32) as u32, // Invert the sign
+                        ParseOperator::Minus => -(v1 as i32) as u32,
                         ParseOperator::BitNot => !v1,
                         _ => {
                             eval_error("Invalid unary operator");
-                            0 // Return a default value
+                            0
                         }
                     }
                 }
@@ -34,7 +34,7 @@ pub fn eval(pt: &Option<&ParseNode>) -> u32 {
                         ParseOperator::Div => {
                             if v2 == 0 {
                                 eval_error("Division by zero");
-                                0 // Return a default value
+                                0
                             } else {
                                 v1 / v2
                             }
@@ -47,7 +47,7 @@ pub fn eval(pt: &Option<&ParseNode>) -> u32 {
                         ParseOperator::BitXor => v1 ^ v2,
                         _ => {
                             eval_error("Invalid binary operator");
-                            0 // Return a default value
+                            0
                         }
                     }
                 }

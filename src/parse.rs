@@ -46,7 +46,7 @@ impl ParseNode {
 }
 
 pub struct ParseTableSt {
-    pub table: Vec<ParseNode>, // Adjust the size as needed
+    pub table: Vec<ParseNode>,
     pub len: usize,
 }
 
@@ -128,8 +128,6 @@ impl ParseTableSt {
         }
         Some(np1)
     }
-
-
 
     fn get_operator(&self, token: ScanToken) -> Option<ParseOperator> {
         match token {

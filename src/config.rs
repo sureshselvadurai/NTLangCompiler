@@ -26,7 +26,7 @@ impl Config {
                         i += 1;
                     } else {
                         println!("Error: Missing argument for -e");
-                        return Config::new(); // Return default config on error
+                        return Config::new();
                     }
                 }
                 "-b" => {
@@ -36,11 +36,11 @@ impl Config {
                             i += 1;
                         } else {
                             println!("Error: Invalid argument for -b");
-                            return Config::new(); // Return default config on error
+                            return Config::new();
                         }
                     } else {
                         println!("Error: Missing argument for -b");
-                        return Config::new(); // Return default config on error
+                        return Config::new();
                     }
                 }
                 "-w" => {
@@ -50,16 +50,16 @@ impl Config {
                             i += 1;
                         } else {
                             println!("Error: Invalid argument for -w");
-                            return Config::new(); // Return default config on error
+                            return Config::new();
                         }
                     } else {
                         println!("Error: Missing argument for -w");
-                        return Config::new(); // Return default config on error
+                        return Config::new();
                     }
                 }
                 _ => {
                     println!("Error: Unknown argument {}", args[i]);
-                    return Config::new(); // Return default config on error
+                    return Config::new();
                 }
             }
             i += 1;

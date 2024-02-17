@@ -6,7 +6,7 @@ mod test;
 use std::env;
 use config::Config;
 use scan::ScanTableSt;
-use parse::{ParseTableSt, print_parse_tree};
+use parse::{ParseTableSt};
 use eval::{eval};
 fn main() {
 
@@ -19,17 +19,8 @@ fn main() {
     let mut parse_node = parse_table.parse_program(&mut scan_table);
 
     let value = eval(&parse_node.as_ref());
+    println!("{}", value);
 
-
-
-    // if let Some(parse_node) = parse_node {
-    //     print_parse_tree(&parse_node);
-    // } else {
-    //     println!("Parsing failed!");
-    // }
-
-
-    let config = Config::parse_args(env::args().collect());
 
 }
 
