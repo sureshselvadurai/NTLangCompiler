@@ -180,4 +180,20 @@ impl ScanTableSt {
 
         false
     }
+
+    pub fn get(&self, i: usize) -> Option<&ScanTokenSt> {
+        if self.cur + i < self.table.len() {
+            Some(&self.table[self.cur + i])
+        } else {
+            None
+        }
+    }
+
+    pub fn getLast(&self, i: usize) -> Option<&ScanTokenSt> {
+        if self.cur >= i {
+            Some(&self.table[self.cur - i])
+        } else {
+            None
+        }
+    }
 }

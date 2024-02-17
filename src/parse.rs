@@ -1,23 +1,12 @@
-// parse.rs - parsing and parse tree construction
+use std::process;
+use scan::{ScanTableSt, ScanToken};
 
-use crate::scan::{ScanTableSt,ScanToken};
-
-
-
-#[derive(Clone)]
-pub enum NodeType {
-    Expression,
-    Literal,
-    UnaryOperation(Operation),
-    BinaryOperation(Operation),
-}
-
-#[derive(Clone)]
-pub enum Operation {
+#[derive(Debug, Clone)]
+pub enum ParseOperator {
     Plus,
     Minus,
-    Multiply,
-    Divide,
+    Mult,
+    Div,
     ShiftRight,
     ShiftLeft,
     ArithShiftRight,
@@ -27,59 +16,78 @@ pub enum Operation {
     BitNot,
 }
 
-pub struct ParseTable {
-    table: Vec<ParseNode>,
-    len: usize,
+#[derive(Debug,Clone)]
+pub enum ParseNodeType{
+    Literal,
+    Oper1,
+    Oper2,
+    None
 }
-
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 pub struct ParseNode {
-    pub node_type: NodeType,
-    pub literal_value: Option<u32>,
-    pub unary_operand: Option<Box<ParseNode>>,
-    pub binary_operands: Option<(Box<ParseNode>, Box<ParseNode>)>,
+    pub(crate) type_: ParseNodeType,
+    pub(crate) value: i32,
+    pub(crate) oper : ParseOperator,
+    pub(crate) left: Option<Box<ParseNode>>,
+    pub(crate) right: Option<Box<ParseNode>>,
 }
-impl ParseTable {
+impl ParseNode {
+    fn new(value: i32) -> Self {
+        ParseNode {
+            type_: ParseNodeType::Literal,
+            value,
+            oper: ParseOperator::Plus,
+            left: None,
+            right: None,
+        }
+    }
+
+
+}
+
+pub struct ParseTableSt {
+    pub table: Vec<ParseNode>, // Adjust the size as needed
+    pub len: usize,
+}
+
+impl ParseTableSt {
     pub fn new() -> Self {
-        Self {
+        ParseTableSt {
             table: Vec::new(),
-            len: 0,
+            len: 0
         }
     }
 
-    pub fn parse(&mut self, scan_table: &mut ScanTableSt) -> Option<ParseNode> {
-        let parse_tree = self.parse_program(scan_table);
-        if scan_table.accept(ScanToken::EOT) {
-            Some(parse_tree)
-        } else {
-            println!("Expecting EOT");
-            None
-        }
-    }
-
-    fn new_node(&mut self, node_type: NodeType) -> ParseNode {
+    pub fn parse_node_new(&mut self) -> ParseNode {
         let node = ParseNode {
-            node_type,
-            literal_value: None,
-            unary_operand: None,
-            binary_operands: None,
+            type_: ParseNodeType::None,
+            value: 0,
+            oper: ParseOperator::Plus,
+            left: None,
+            right: None,
         };
         self.table.push(node.clone());
         self.len += 1;
         node
     }
 
-    fn parse_program(&mut self, scan_table: &mut ScanTableSt) -> ParseNode {
-        self.parse_expression(scan_table)
+    pub fn parse_program(&mut self, st: &mut ScanTableSt) -> Option<ParseNode> {
+        let np1 = self.parse_expression(st)?;
+
+        if !st.accept(ScanToken::EOT) {
+            parse_error("Expecting EOT");
+        }
+
+        Some(np1)
     }
 
-    fn parse_expression(&mut self, scan_table: &mut ScanTableSt) -> ParseNode {
-        let mut node = self.parse_operand(scan_table);
+    pub fn parse_expression(&mut self, st: &mut ScanTableSt) -> Option<ParseNode> {
+        let mut np1 = self.parse_operand(st)?;
 
         loop {
-            let token = scan_table.get(0);
+            let token = st.get(0);
             let is_operator = matches!(
-                token.id,
+                token.unwrap().id,
                 ScanToken::Plus
                     | ScanToken::Minus
                     | ScanToken::Mult
@@ -93,74 +101,136 @@ impl ParseTable {
             );
 
             if is_operator {
-                let oper = match token.id {
-                    ScanToken::Plus => Operation::Plus,
-                    ScanToken::Minus => Operation::Minus,
-                    ScanToken::Mult => Operation::Multiply,
-                    ScanToken::Div => Operation::Divide,
-                    ScanToken::ShiftRight => Operation::ShiftRight,
-                    ScanToken::ShiftLeft => Operation::ShiftLeft,
-                    ScanToken::ArithShiftRight => Operation::ArithShiftRight,
-                    ScanToken::BitAnd => Operation::BitAnd,
-                    ScanToken::BitOr => Operation::BitOr,
-                    ScanToken::BitXor => Operation::BitXor,
+                let operator = match token.unwrap().id {
+                    ScanToken::Plus => Some(ParseOperator::Plus),
+                    ScanToken::Minus => Some(ParseOperator::Minus),
+                    ScanToken::Mult => Some(ParseOperator::Mult),
+                    ScanToken::Div => Some(ParseOperator::Div),
+                    ScanToken::ShiftRight => Some(ParseOperator::ShiftRight),
+                    ScanToken::ShiftLeft => Some(ParseOperator::ShiftLeft),
+                    ScanToken::ArithShiftRight => Some(ParseOperator::ArithShiftRight),
+                    ScanToken::BitAnd => Some(ParseOperator::BitAnd),
+                    ScanToken::BitOr => Some(ParseOperator::BitOr),
+                    ScanToken::BitXor => Some(ParseOperator::BitXor),
                     _ => unreachable!(),
                 };
+                st.accept(ScanToken::Any); // Consume the operator token
+                let mut np2 = self.parse_node_new();
 
-                let mut binary_node = self.new_node(NodeType::BinaryOperation(oper));
-                binary_node.binary_operands = Some((Box::new(node), Box::new(self.parse_operand(scan_table))));
-                node = binary_node;
+                np2.type_= ParseNodeType::Oper2;
+                np2.oper = operator.unwrap();
+                np2.left = Some(Box::new(np1));
+                np2.right = Some(Box::new(self.parse_operand(st)?));
+                np1 = np2;
             } else {
                 break;
             }
         }
-
-        node
+        Some(np1)
     }
 
-    fn parse_operand(&mut self, scan_table: &mut ScanTableSt) -> ParseNode {
-        let token = scan_table.get(0);
-        match token.id {
-            ScanToken::IntLit => {
-                let value = token.value.parse().unwrap();
-                self.new_node(NodeType::Literal).with_literal_value(value)
-            }
-            ScanToken::HexLit => {
-                let value = u32::from_str_radix(&token.value[2..], 16).unwrap();
-                self.new_node(NodeType::Literal).with_literal_value(value)
-            }
-            ScanToken::BinLit => {
-                let value = u32::from_str_radix(&token.value[2..], 2).unwrap();
-                self.new_node(NodeType::Literal).with_literal_value(value)
-            }
-            ScanToken::Minus => {
-                let mut unary_node = self.new_node(NodeType::UnaryOperation(Operation::Minus));
-                unary_node.unary_operand = Some(Box::new(self.parse_operand(scan_table)));
-                unary_node
-            }
-            ScanToken::BitNot => {
-                let mut unary_node = self.new_node(NodeType::UnaryOperation(Operation::BitNot));
-                unary_node.unary_operand = Some(Box::new(self.parse_operand(scan_table)));
-                unary_node
-            }
-            ScanToken::LParen => {
-                let expression_node = self.parse_expression(scan_table);
-                if !scan_table.accept(ScanToken::RParen) {
-                    println!("Expecting ')'");
-                }
-                expression_node
-            }
-            _ => {
-                println!("Bad operand");
-                unreachable!()
-            }
+
+
+    fn get_operator(&self, token: ScanToken) -> Option<ParseOperator> {
+        match token {
+            ScanToken::Plus => Some(ParseOperator::Plus),
+            ScanToken::Minus => Some(ParseOperator::Minus),
+            ScanToken::Mult => Some(ParseOperator::Mult),
+            ScanToken::Div => Some(ParseOperator::Div),
+            ScanToken::ShiftRight => Some(ParseOperator::ShiftRight),
+            ScanToken::ShiftLeft => Some(ParseOperator::ShiftLeft),
+            ScanToken::ArithShiftRight => Some(ParseOperator::ArithShiftRight),
+            ScanToken::BitAnd => Some(ParseOperator::BitAnd),
+            ScanToken::BitOr => Some(ParseOperator::BitOr),
+            ScanToken::BitXor => Some(ParseOperator::BitXor),
+            _ => None,
         }
+    }
+
+    pub fn parse_operand(&mut self, st: &mut ScanTableSt) -> Option<ParseNode> {
+        if st.accept(ScanToken::IntLit) {
+            Some(self.parse_literal_value(st, 10))
+        } else if st.accept(ScanToken::HexLit) {
+            Some(self.parse_literal_value(st, 16))
+        } else if st.accept(ScanToken::BinLit) {
+            Some(self.parse_literal_value(st, 2))
+        } else if st.accept(ScanToken::Minus) {
+            let mut np1 = self.parse_node_new();
+
+            np1.type_= ParseNodeType::Oper1;
+            np1.oper = self.get_operator(ScanToken::Minus).unwrap();
+            np1.left = Some(Box::new(self.parse_operand(st)?));
+            Some(np1)
+        } else if st.accept(ScanToken::BitNot) {
+            let mut np1 = self.parse_node_new();
+
+            np1.type_= ParseNodeType::Oper1;
+            np1.oper = self.get_operator(ScanToken::BitNot).unwrap();
+            np1.left = Some(Box::new(self.parse_operand(st)?));
+            Some(np1)
+        } else if st.accept(ScanToken::LParen) {
+            let np1 = self.parse_expression(st)?;
+            if !st.accept(ScanToken::RParen) {
+                parse_error("Expecting ')'");
+            }
+            Some(np1)
+        } else {
+            parse_error("Bad operand");
+            None
+        }
+    }
+
+    fn parse_literal_value(&mut self, st: &mut ScanTableSt, base: u32) -> ParseNode {
+        let token = st.getLast(1).unwrap(); // Get the last scanned token
+        let value = match base {
+            10 => parse_literal_value_base_10(token.value.as_str()),
+            16 => parse_literal_value_base_16(token.value.as_str()),
+            2 => parse_literal_value_base_2(token.value.as_str()),
+            _ => panic!("Unsupported base"),
+        };
+        let mut np1 = self.parse_node_new();
+
+        np1.type_= ParseNodeType::Literal;
+        np1.value = value as i32;
+        np1
     }
 }
 
-impl ParseNode {
-    fn with_literal_value(mut self, value: u32) -> Self {
-        self.literal_value = Some(value);
-        self
+fn parse_literal_value_base_10(value: &str) -> u32 {
+    value.parse().unwrap() // Parse the string as u32
+}
+
+fn parse_literal_value_base_16(value: &str) -> u32 {
+    u32::from_str_radix(value.trim_start_matches("0x"), 16).unwrap() // Parse hexadecimal
+}
+
+fn parse_literal_value_base_2(value: &str) -> u32 {
+    u32::from_str_radix(value.trim_start_matches("0b"), 2).unwrap() // Parse binary
+}
+
+fn parse_error(err: &str) {
+    println!("{}", err);
+    process::exit(-1);
+}
+
+pub fn print_parse_tree(node: &ParseNode) {
+    match node.type_ {
+        ParseNodeType::Literal => println!("Literal: {}", node.value),
+        ParseNodeType::Oper1 => {
+            println!("Operator: {:?}", node.oper);
+            if let Some(ref left) = node.left {
+                print_parse_tree(left);
+            }
+        }
+        ParseNodeType::Oper2 => {
+            println!("Operator: {:?}", node.oper);
+            if let Some(ref left) = node.left {
+                print_parse_tree(left);
+            }
+            if let Some(ref right) = node.right {
+                print_parse_tree(right);
+            }
+        }
+        ParseNodeType::None => println!("Empty Node"),
     }
 }
