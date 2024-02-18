@@ -43,6 +43,9 @@ impl Config {
                         return Config::new();
                     }
                 }
+                "-u" => {
+                    config.unsigned_int = false;
+                }
                 "-w" => {
                     if i + 1 < args.len() {
                         if let Ok(val) = args[i + 1].parse::<u32>() {
