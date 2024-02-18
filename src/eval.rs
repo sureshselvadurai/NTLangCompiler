@@ -68,8 +68,8 @@ pub fn eval_print(cp: &Config, value: u32) {
 
     match cp.base {
         10 => convert_to_decimal(n_bit_value, &mut str, &mut i, sign, cp.width),
-        2 => convert_to_binary(value, &mut str, &mut i, cp.width),
-        16 => convert_to_hexadecimal(value, &mut str, &mut i, cp.width),
+        2 => str = convert_to_binary(value, cp.width),
+        16 => str = convert_to_hexadecimal(value, cp.width),
         _ => {}
     }
     println!("{}", str);
@@ -123,19 +123,20 @@ fn convert_to_decimal(n_bit_value: u32, str: &mut String, i: &mut usize, sign: b
     mem::replace(str, reversed_str);
 }
 
-fn convert_to_binary(value: u32, str: &mut String, i: &mut usize, width: u32) {
+fn convert_to_binary(value: u32, width: u32) -> String {
+    let mut binary_str = String::new();
     for j in 0..width {
         let mask = 1 << j;
         let bit = if (value & mask) != 0 { '1' } else { '0' };
-
-        str.push(bit);
+        binary_str.push(bit);
     }
-
-    let reversed_str: String = str.chars().rev().collect();
-    mem::replace(str, reversed_str);
+    format!("0b{}", binary_str.chars().rev().collect::<String>())
 }
 
-fn convert_to_hexadecimal(value: u32, str: &mut String, i: &mut usize, width: u32) {
+
+
+fn convert_to_hexadecimal(value: u32, width: u32) -> String {
+    let mut hex_str = String::new();
     let mut value = if width != 32 {
         let mask = (1 << width) - 1;
         value & mask
@@ -152,9 +153,8 @@ fn convert_to_hexadecimal(value: u32, str: &mut String, i: &mut usize, width: u3
             10..=15 => (hex_digit as u8 - 10 + b'A') as char,
             _ => panic!("Invalid hex digit"),
         };
-        str.push(digit_char);
+        hex_str.push(digit_char);
     }
 
-    let reversed_str: String = str.chars().rev().collect();
-    mem::replace(str, reversed_str);
+    format!("0x{}", hex_str.chars().rev().collect::<String>())
 }

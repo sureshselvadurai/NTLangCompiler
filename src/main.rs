@@ -2,12 +2,11 @@ mod config;
 mod scan;
 mod parse;
 mod eval;
-mod test;
 use std::env;
 use config::Config;
 use scan::ScanTableSt;
 use parse::{ParseTableSt};
-use eval::{eval};
+use eval::{eval, eval_print};
 fn main() {
 
     let config = Config::parse_args(env::args().collect());
@@ -19,7 +18,7 @@ fn main() {
     let mut parse_node = parse_table.parse_program(&mut scan_table);
 
     let value = eval(&parse_node.as_ref());
-    println!("{}", value);
+    eval_print(&config,value);
 
 
 }
