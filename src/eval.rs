@@ -11,7 +11,11 @@ pub fn eval(pt: &Option<&ParseNode>) -> u32 {
     match pt {
         Some(pt) => {
             match pt.type_ {
-                ParseNodeType::Literal => pt.value as u32,
+                ParseNodeType::Literal => {
+                    let a = pt.value;;
+                    let b = pt.value as u32;;
+                    pt.value as u32
+                },
                 ParseNodeType::Oper1 => {
                     let v1 = eval(&pt.left.as_ref().map(|boxed| &**boxed));
                     match pt.oper {
@@ -95,8 +99,8 @@ use std::mem;
 
 fn convert_to_decimal(n_bit_value: u32, str: &mut String, _i: &mut usize, sign: bool, width: u32) {
     let mut n_bit_value = if sign {
-        let mask = (1 << width) - 1;
         if width != 32 {
+            let mask = (1 << width) - 1;
             n_bit_value & mask
         } else {
             !n_bit_value + 1
@@ -110,11 +114,11 @@ fn convert_to_decimal(n_bit_value: u32, str: &mut String, _i: &mut usize, sign: 
         return;
     }
 
-    let mut digits = Vec::new();
+    let mut digits = Vec::new(); // Store individual digits temporarily
 
     while n_bit_value != 0 {
         let remainder = n_bit_value % 10;
-        digits.push(std::char::from_digit(remainder, 10).unwrap());
+        digits.push(std::char::from_digit(remainder, 10).unwrap()); // Push each digit as a character
         n_bit_value /= 10;
     }
 
@@ -122,6 +126,7 @@ fn convert_to_decimal(n_bit_value: u32, str: &mut String, _i: &mut usize, sign: 
         digits.push('-');
     }
 
+    // Reverse the order of digits and collect them into the string
     for digit in digits.into_iter().rev() {
         str.push(digit);
     }
