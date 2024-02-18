@@ -95,9 +95,7 @@ impl ScanTableSt {
                 self.add_token(ScanToken::LParen, c);
             } else if c == ')' {
                 self.add_token(ScanToken::RParen, c);
-            } else if c.is_digit(10) {
-                self.scan_intlit(&mut iter,c);
-            } else if c == '0' {
+            }else if c == '0' {
                 if iter.peek() == Some(&'x') || iter.peek() == Some(&'X') {
                     self.scan_hexlit(&mut iter);
                 } else if iter.peek() == Some(&'b') || iter.peek() == Some(&'B') {
@@ -105,7 +103,9 @@ impl ScanTableSt {
                 } else {
                     self.add_token(ScanToken::Any, c);
                 }
-            } else if c.is_whitespace() {
+            } else if c.is_digit(10) {
+                self.scan_intlit(&mut iter,c);
+            }  else if c.is_whitespace() {
                 continue;
             } else {
                 println!("scan error: invalid char: {}", c);
