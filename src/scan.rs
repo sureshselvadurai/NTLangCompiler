@@ -71,14 +71,17 @@ impl ScanTableSt {
                 self.add_token(ScanToken::Div, c);
             } else if c == '>' {
                 if iter.peek() == Some(&'>') {
+                    iter.next();
                     self.add_token(ScanToken::ShiftRight, c);
                 } else if iter.peek() == Some(&'-') {
+                    iter.next();
                     self.add_token(ScanToken::ArithShiftRight, c);
                 } else {
                     self.add_token(ScanToken::Any, c);
                 }
             } else if c == '<' {
                 if iter.peek() == Some(&'<') {
+                    iter.next();
                     self.add_token(ScanToken::ShiftLeft, c);
                 } else {
                     self.add_token(ScanToken::Any, c);
