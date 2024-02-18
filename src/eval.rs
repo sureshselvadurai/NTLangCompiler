@@ -20,7 +20,9 @@ pub fn eval(pt: &Option<&ParseNode>) -> u32 {
                     let v1 = eval(&pt.left.as_ref().map(|boxed| &**boxed));
                     match pt.oper {
                         ParseOperator::Plus => v1,
-                        ParseOperator::Minus => -(v1 as i32) as u32,
+                        ParseOperator::Minus => {
+                            -(v1 as i32) as u32
+                        },
                         ParseOperator::BitNot => !v1,
                         _ => {
                             eval_error("Invalid unary operator");
@@ -45,7 +47,10 @@ pub fn eval(pt: &Option<&ParseNode>) -> u32 {
                         }
                         ParseOperator::ShiftRight => v1 >> v2,
                         ParseOperator::ShiftLeft => v1 << v2,
-                        ParseOperator::ArithShiftRight => ((v1 as i32) >> v2) as u32,
+                        ParseOperator::ArithShiftRight => {
+                            let c = ((v1 as i32) >> v2) as u32;
+                            ((v1 as i32) >> v2) as u32
+                        },
                         ParseOperator::BitAnd => v1 & v2,
                         ParseOperator::BitOr => v1 | v2,
                         ParseOperator::BitXor => v1 ^ v2,
@@ -97,17 +102,16 @@ fn is_negative(n_bit_value: u32, width: u32, unsigned_int: bool) -> bool {
 
 use std::mem;
 
-fn convert_to_decimal(n_bit_value: u32, str: &mut String, _i: &mut usize, sign: bool, width: u32) {
-    let mut n_bit_value = if sign {
+fn convert_to_decimal(mut n_bit_value: u32, str: &mut String, _i: &mut usize, sign: bool, width: u32) {
+    if sign {
         if width != 32 {
             let mask = (1 << width) - 1;
-            n_bit_value & mask
+            n_bit_value ^= mask;
+            n_bit_value += 1;
         } else {
-            !n_bit_value + 1
+            n_bit_value = !n_bit_value + 1;
         }
-    } else {
-        n_bit_value
-    };
+    }
 
     if n_bit_value == 0 {
         str.push('0');
