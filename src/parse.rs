@@ -198,7 +198,7 @@ fn parse_literal_value_base_10(value: &str) -> u32 {
     match value.parse() {
         Ok(parsed) => parsed,
         Err(_) => {
-            print!("overflows uint32_t: {}",value);
+            println!("overflows uint32_t: {}",value);
             process::exit(1);
         }
     }
@@ -208,7 +208,7 @@ fn parse_literal_value_base_16(value: &str) -> u32 {
     match u32::from_str_radix(value.trim_start_matches("0x"), 16) {
         Ok(parsed) => parsed,
         Err(_) => {
-            print!("overflows uint32_t: {}",value);
+            println!("overflows uint32_t: {}",value);
             process::exit(1);
         }
     }
@@ -218,7 +218,7 @@ fn parse_literal_value_base_2(value: &str) -> u32 {
     match u32::from_str_radix(value.trim_start_matches("0b"), 2) {
         Ok(parsed) => parsed,
         Err(_) => {
-            print!("overflows uint32_t: {}",value);
+            println!("overflows uint32_t: {}",value);
             process::exit(1);
         }
     }
