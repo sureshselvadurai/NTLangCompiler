@@ -141,6 +141,7 @@ impl ParseTableSt {
             ScanToken::BitAnd => Some(ParseOperator::BitAnd),
             ScanToken::BitOr => Some(ParseOperator::BitOr),
             ScanToken::BitXor => Some(ParseOperator::BitXor),
+            ScanToken::BitNot => Some(ParseOperator::BitNot),
             _ => None,
         }
     }
@@ -161,7 +162,6 @@ impl ParseTableSt {
             Some(np1)
         } else if st.accept(ScanToken::BitNot) {
             let mut np1 = self.parse_node_new();
-
             np1.type_= ParseNodeType::Oper1;
             np1.oper = self.get_operator(ScanToken::BitNot).unwrap();
             np1.left = Some(Box::new(self.parse_operand(st)?));
