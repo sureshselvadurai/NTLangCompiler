@@ -93,11 +93,11 @@ fn is_negative(n_bit_value: u32, width: u32, unsigned_int: bool) -> bool {
 
 use std::mem;
 
-fn convert_to_decimal(n_bit_value: u32, str: &mut String, i: &mut usize, sign: bool, width: u32) {
+fn convert_to_decimal(n_bit_value: u32, str: &mut String, _i: &mut usize, sign: bool, width: u32) {
     let mut n_bit_value = if sign {
+        let mask = (1 << width) - 1;
         if width != 32 {
-            let mask = (1 << width) - 1;
-            n_bit_value ^ mask
+            n_bit_value & mask
         } else {
             !n_bit_value + 1
         }
@@ -110,17 +110,21 @@ fn convert_to_decimal(n_bit_value: u32, str: &mut String, i: &mut usize, sign: b
         return;
     }
 
+    let mut digits = Vec::new();
+
     while n_bit_value != 0 {
-        let remainder = (n_bit_value % 10) as u8;
-        str.push((remainder + b'0') as char);
+        let remainder = n_bit_value % 10;
+        digits.push(std::char::from_digit(remainder, 10).unwrap());
         n_bit_value /= 10;
     }
+
     if sign {
-        str.push('-');
+        digits.push('-');
     }
 
-    let reversed_str: String = str.chars().rev().collect();
-    mem::replace(str, reversed_str);
+    for digit in digits.into_iter().rev() {
+        str.push(digit);
+    }
 }
 
 fn convert_to_binary(value: u32, width: u32) -> String {
